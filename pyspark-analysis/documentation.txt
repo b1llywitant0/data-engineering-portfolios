@@ -1,0 +1,112 @@
+THE EXPLANATION OF THE CODES
+
+STEP 1: IMPORTING NECESSARY LIBRARIES
+Note: Installing PySpark in local device requires Java Development Kit and setting up the Environment Variables.
+Reference for installing PySpark: https://medium.com/@deepaksrawat1906/a-step-by-step-guide-to-installing-pyspark-on-windows-3589f0139a30
+
+STEP 2: CREATING SPARK CONTEXT
+In this task, SparkSession was used.
+
+STEP 3: IMPORTING DATA
+There are 3 csv files: calendar, customer_flight_activity, customer_loyalty_history.
+
+calendar was assigned to calendar variable.
+customer_flight_activity was assigned to cust_flight variable.
+customer_loyalty_history was assigned to cust_loyalty variable.
+
+StructType was used to define the data type of each column from the tables.
+
+STEP 4: DATA UNDERSTANDING & CLEANING
+How to clean the data if the context of the data is unknown?
+
+Based on the tables:
+1. cust_flight is event-based table which explains the flights information from users
+2. cust_loyalty is user-based table which explains the information of users
+3. calendar is only used to easily take year, quarter, and month as category for analysis purpose, if needed
+The tables can be joined using loyalty_number column.
+
+------------------------------------------------------------------------------------
+
+For each table, the first thing to do is to identify the columns with NULL values:
+1. cust_flight: points_accumulated
+2. cust_loyalty: salary, customer_lifetime_value, enrollment_year, enrollment_month, cancellation_year, cancellation_month
+
+Moreover, using either .describe() or .summary() can be done to see the anomalies with the numerical data.
+
+After that, the identified columns can be cleaned first.
+
+For points_accumulated, based on observation, it is highly correlated with distance.
+Based on analysis, the NULL values of points_accumulated can be filled with 1.5x value of distance.
+
+For salary, based on available columns, it is hypothesized that it should have correlation with either total_flights, distance, and/or loyalty_card.
+Usually, if the completeness of the data is considered, average/median salary can be assigned based on total_flights/distance/loyalty_card.
+However, based on the analysis, there is no significant difference between salary and those columns. 
+Thus, assigning the average/median salary will be biased and not recommended for the current simple analysis.
+
+For customer_lifetime_value, the data can't be recovered since the tables didn't have any transaction data regarding invoice value.
+
+For enrollment_year, enrollment_month, cancellation_year and cancellation_month, the data also can't be recovered because there was no correlated data, even in cust_flight table.
+
+------------------------------------------------------------------------------------
+
+cust_flight:
+
+Other than NULL values, anomalies can be fixed if present, such as in dollar_cost_points_redeemed and points_redeemed columns.
+The dollar_cost_points_redeemed is 18% of points_redeemed.
+
+Moreover, since the cust_flight only have year and month columns, new column of DateType was created from both columns.
+It will be the key to be used for join operation with calendar table, if needed. It can also be used for trend analysis later.
+
+Unnecessary data was also observed in cust_flight. There is no purpose of row with 0 values in total_flights, distance, points_accumulated, points_redeemed, dollar_cost_points_redeemed. Thus, the rows were dropped.
+
+------------------------------------------------------------------------------------
+
+cust_loyalty:
+
+salary column had negative value which is an anomaly. ABS function was used.
+
+Since the table was event-based, the data can be deduplicated based on loyalty_number.
+In this task, the deduplication was directly applied. 
+However, the author understands that for safety, the duplicated data should be checked on loyalty_number and other identifying column as well. 
+Warnings should be applied if there are duplicated loyalty_number with different user information.
+
+STEP 5: VISUALIZATION
+The visualizations were based on questions.
+
+1. How is the flight trend? Is there any seasonality and where is the peak season? 
+The result can be used for marketing team to pinpoint the best time to offer promo(s).
+Line graph was presented with period as X axis and double Y-axes using total_flights and redeemed_points.
+The result: 
+The seasonal trend was observed with peaks on March, July, and December.
+It is surprising that the peak of flights season of the dataset located mostly in July.
+Considering the location of the dataset (Canada), the peak in July was caused by Summer Break Holiday.
+Reference: https://www.edarabia.com/school-holidays-canada/#:~:text=Summer%20break%20in%20Canada%20typically,and%20ends%20in%20New%20Year).
+
+2. Is there any correlation between salary and the frequency or total distance of flights?
+The result can be used for user segmentation. If the result is statistically significant, different actions can be done based on users characteristics.
+Scatter plot was presented using total_flights, distance, and salary with loyalty_card information.
+The result:
+total_flights and total_distance was highly correlated, using either one is okay
+No significant correlation between total_flights and salary
+
+3. Is there any different behaviour of loyalty_card?
+The result can be used for user segmentation. If the result is statistically significant, different actions can be done based on users characteristics.
+Histogram was presented.
+The result:
+No significant difference in flight behavior between loyalty_card status based on number of flights count or even salary.
+
+4. Is there any correlation between gender/education with the total_flights? 
+The result can be used for user segmentation. If the result is statistically significant, different actions can be done based on users characteristics.
+Note: The context is that this is data of flight industry. To ask correlation between gender/education with salary will be too out of context.
+Bar plot was presented using gender and total_flights with education information.
+The result:
+No significant difference in flight behaviour between gender.
+Most of the flight data was users with Bachelor's or College's degree. However, this may caused by population demographic, not flights behaviour.
+
+5. Where is the busiest cities with the most flights?
+Pretty straightforward. The result can be used for marketing team as well, just like in point no. 1. 
+Or maybe, it can be used for better plane distribution. High demand needs high availability, in this case: number of planes/flights.
+The result:
+Ontario, British Columbia, and Quebec has the most total_flights.
+Note: The data presented was not the location of airports but the location of users, thus this analysis may be biased. However, hypothetically, there might be correlation of users location with the airport location.
+Another assumption is that location may have correlation with salary, which can be confounding factors. But, it is not. Data not displayed in python file, but available in notebook.
